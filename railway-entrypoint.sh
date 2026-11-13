@@ -29,12 +29,14 @@ export REGISTRY_AUTH=htpasswd
 export REGISTRY_AUTH_HTPASSWD_REALM="${REGISTRY_REALM:-Registry}"
 export REGISTRY_AUTH_HTPASSWD_PATH=/etc/distribution/auth/htpasswd
 
-# Deleting a tag or manifest only unlinks it; the layers stay on disk until a
-# garbage collection. It's only safe while nothing is pushing, so run it here,
-# before the registry starts. Only blobs no manifest refers to are removed.
+# Deleting a tag only unlinks it; the image stays on disk until a garbage
+# collection. That is only safe while nothing is pushing, so run it here, before
+# the registry starts. --delete-untagged removes images no tag points to, then the
+# layers no image uses. Multi-arch images keep their per-platform manifests
+# (checked on 3.1.2).
 if [ "${GC_ON_START:-true}" = "true" ] && [ -d "$DATA/docker" ]; then
-  echo "Garbage collection: removing layers no image uses"
-  registry garbage-collect "$CONFIG" 2>&1 | grep -vE 'marking (manifest|blob)' | tail -5 || echo "garbage collection failed; starting anyway"
+  echo "Garbage collection: removing untagged images and unused layers"
+  registry garbage-collect --delete-untagged "$CONFIG" 2>&1 | grep -vE 'marking (manifest|blob)' | tail -5 || echo "garbage collection failed; starting anyway"
 fi
 
 echo "Registry on port ${PORT:-5000}, user $USER_NAME, storage $DATA ($(df -h "$DATA" | awk 'NR==2{print $4" free of "$2}'))"
