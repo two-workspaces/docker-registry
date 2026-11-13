@@ -39,5 +39,10 @@ if [ "${GC_ON_START:-true}" = "true" ] && [ -d "$DATA/docker" ]; then
   registry garbage-collect --delete-untagged "$CONFIG" 2>&1 | grep -vE 'marking (manifest|blob)' | tail -5 || echo "garbage collection failed; starting anyway"
 fi
 
+# Railway counts the kernel's cache of files this container has touched as the
+# service's memory, and with no memory pressure it is never freed: pushing a 500 MB
+# image showed as 480 MB used. Drop the cache of the image store every 15 minutes.
+( while sleep 900; do nice -n 19 drop-file-cache "$DATA" || true; done ) &
+
 echo "Registry on port ${PORT:-5000}, user $USER_NAME, storage $DATA ($(df -h "$DATA" | awk 'NR==2{print $4" free of "$2}'))"
 exec registry serve "$CONFIG"
