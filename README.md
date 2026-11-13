@@ -43,11 +43,11 @@ The password is the service's `REGISTRY_PASSWORD` variable. To deploy an image f
 
 ### Implementation Details
 
-- **Tested on Railway:** PENDING
-- **Deleting images:** the registry API deletes by digest, for example `crane delete <domain>/my-app@sha256:…` or `regctl tag delete <domain>/my-app:1.0`. The space comes back at the next start of the service (redeploy or restart).
+- **Tested on Railway:** `docker login`, `docker push` and `docker pull` from GitHub Actions (a 150 MB layer each way in about 10 seconds), and a 537 MB multi-arch image with a 229 MB layer copied in and pulled back intact with crane; anonymous and wrong-password requests get 401; deleting both tags of the 537 MB image and restarting freed its space while the other image still pulled; an upgrade with images on the volume kept them. All at 0.5 GB of memory, with no out-of-memory kills. Deploying a Railway service from the registry wasn't tested: private registry credentials need a Pro plan.
+- **Deleting images:** delete the tag, for example `crane delete <domain>/my-app:1.0` (or a digest, `my-app@sha256:…`). On the next start of the service (redeploy or restart), images that no tag points to and their layers are removed, and the space comes back. Turn this off with `GC_ON_START=false` if you keep images by digest only. Multi-arch images keep all their platforms.
 - **Storage:** images take volume space, and Railway volumes have a plan size: 0.5 GB on Free and Trial, 5 GB on Hobby and 50 GB on Pro, which you can grow in the volume's settings. One small image fits in 0.5 GB; a real registry wants Hobby or above.
-- **Memory:** PENDING
-- **Image:** `ghcr.io/two-workspaces/docker-registry`, built from this repository's Dockerfile on `registry:3.1.2`, with `apache2-utils` added for the password file.
+- **Memory:** about 20 MB idle and under 40 MB while pushing; it runs on the Free plan's 0.5 GB. Railway counts the kernel's file cache as memory, and a push showed as 480 MB of it, so the template drops the image store's cache every 15 minutes.
+- **Image:** `ghcr.io/two-workspaces/docker-registry`, built from this repository's Dockerfile on `registry:3.1.2`, with `apache2-utils` added for the password file and `python3` for the cache trimmer.
 
 ## Why Deploy Docker Registry on Railway?
 
