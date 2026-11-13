@@ -3,8 +3,9 @@
 FROM registry:3.1.2
 # htpasswd makes the bcrypt password file the registry's htpasswd auth reads.
 RUN apk add --no-cache apache2-utils
-# The image's example config logs at debug level, every request with its headers.
-ENV REGISTRY_LOG_LEVEL=info
+# The image's example config logs at debug level, every request with its headers,
+# and tags every line environment=development.
+ENV REGISTRY_LOG_LEVEL=info REGISTRY_LOG_FIELDS_ENVIRONMENT=railway
 COPY railway-entrypoint.sh /railway-entrypoint.sh
 RUN chmod 755 /railway-entrypoint.sh
 ENTRYPOINT ["/railway-entrypoint.sh"]
